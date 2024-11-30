@@ -33,12 +33,12 @@ func main() {
 		"OANDA": {
 			Timezone:          "UTC",
 			DailyUpdateHour:   21,
-			DailyUpdateMinute: 52,
+			DailyUpdateMinute: 13,
 		},
 		"MT5_FTMO": {
 			Timezone:          "Europe/Prague",
-			DailyUpdateHour:   0,
-			DailyUpdateMinute: 0,
+			DailyUpdateHour:   22,
+			DailyUpdateMinute: 13,
 		},
 	}
 

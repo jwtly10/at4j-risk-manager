@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+const (
+	BrokerTypeOanda    = "OANDA"
+	BrokerTypeMT5_FTMO = "MT5_FTMO"
+)
+
 // BrokerAdapter defines the interface that all broker adapters must implement
 // So we can do consistent monitoring across all brokers
 // Note the equity returned is int64, this is because we are dealing with money
@@ -16,9 +21,9 @@ type BrokerAdapter interface {
 
 func NewAdapter(brokerType string) (BrokerAdapter, error) {
 	switch brokerType {
-	case "OANDA":
+	case BrokerTypeOanda:
 		return &OandaAdapter{}, nil
-	case "MT5_FTMO":
+	case BrokerTypeMT5_FTMO:
 		return &MT5Adapter{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported broker type: %s", brokerType)

@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type brokerRepository interface {
-	GetAllActiveBrokers(ctx context.Context) ([]BrokerAccount, error)
+	GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity, error)
+	RecordEquity(ctx context.Context, brokerID int64, equity decimal.Decimal) error
 }
 
 type BrokerTimeConfig struct {
@@ -65,7 +69,7 @@ func (et *EquityTracker) Stop() {
 // based on the configured check configurations
 func (et *EquityTracker) checkAndUpdateEquity() error {
 	log.Println("Checking and updating equity")
-	accounts, err := et.brokerRepo.GetAllActiveBrokers(context.TODO())
+	accounts, err := et.brokerRepo.GetActiveBrokers(context.TODO())
 	if err != nil {
 		return fmt.Errorf("error getting all active brokers: %v", err)
 	}
@@ -87,15 +91,34 @@ func (et *EquityTracker) checkAndUpdateEquity() error {
 		now := et.timeProvider.Now().In(location)
 
 		if isUpdateTime(now, config.DailyUpdateHour, config.DailyUpdateMinute) {
+			// If theres NO last equity, we should always update it
+			if account.LastEquityUpdate != nil {
+				// Else handle the case when equity has already been tracked today
+				lastUpdateLocal := account.LastEquityUpdate.In(location)
+
+				if isSameDay(now, lastUpdateLocal) {
+					// TODO: Remove this log statement
+					log.Printf("Equity already updated for broker %s today", account.BrokerType)
+					continue
+				}
+			}
 			log.Printf("Updating equity for broker %s", account.BrokerType)
+
+			// TODO: Implement  get real equity from the brokers api
+
+			// Random number betwen 0 and 100
+			equity := 100 * rand.Float64()
+			err := et.brokerRepo.RecordEquity(context.TODO(), account.ID, decimal.NewFromFloat(equity))
+			if err != nil {
+				return fmt.Errorf("error recording equity for broker %s: %v", account.BrokerType, err)
+			}
 		}
 	}
 
 	return nil
 }
 
-// isUpdateTime checks if the given time is the target time to update equity
-// for a broker
+// isUpdateTime checks if the given time is the target time to update equity for the broker
 func isUpdateTime(t time.Time, targetHour, targetMinute int) bool {
 	// Check if we're within the first check interval after the target time
 	// This prevents multiple updates within the same hour
@@ -105,4 +128,11 @@ func isUpdateTime(t time.Time, targetHour, targetMinute int) bool {
 	return currentHour == targetHour &&
 		currentMinute >= targetMinute &&
 		currentMinute < targetMinute+1
+}
+
+// isSameDay checks if two time instances are on the same day
+func isSameDay(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	"github.com/shopspring/decimal"
 )
 
 type DBClient struct {
@@ -33,24 +34,38 @@ func NewDBClient(db *sql.DB) *DBClient {
 	return &DBClient{db: db}
 }
 
-// GetAllActiveBrokers returns all active broker accounts
-func (r *DBClient) GetAllActiveBrokers(ctx context.Context) ([]BrokerAccount, error) {
+// GetActiveBrokers returns all active broker accounts and when equity was last tracked
+func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity, error) {
 	query := `
-        SELECT id, broker_name, broker_type, broker_env, account_id, 
-               active, initial_balance, created_at, updated_at 
-        FROM algotrade.broker_accounts_tb
-        WHERE active = true
+        SELECT 
+            b.id, 
+            b.broker_name, 
+            b.broker_type, 
+            b.broker_env, 
+            b.account_id, 
+            b.active, 
+            b.initial_balance, 
+            b.created_at, 
+            b.updated_at,
+            e.created_at as last_equity_update
+        FROM algotrade.broker_accounts_tb b
+        LEFT JOIN (
+            SELECT broker_account_id, MAX(created_at) as created_at
+            FROM algotrade.equity_tracking_tb
+            GROUP BY broker_account_id
+        ) e ON b.id = e.broker_account_id
+        WHERE b.active = true
     `
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var accounts []BrokerAccount
+	var accounts []BrokerWithLastEquity
 	for rows.Next() {
-		var account BrokerAccount
+		var account BrokerWithLastEquity
 		if err := rows.Scan(
 			&account.ID,
 			&account.BrokerName,
@@ -61,11 +76,22 @@ func (r *DBClient) GetAllActiveBrokers(ctx context.Context) ([]BrokerAccount, er
 			&account.InitialBalance,
 			&account.CreatedAt,
 			&account.UpdatedAt,
+			&account.LastEquityUpdate,
 		); err != nil {
 			return nil, err
 		}
 		accounts = append(accounts, account)
 	}
-
 	return accounts, rows.Err()
+}
+
+// RecordEquityUpdate records the equity update for a broker account
+func (c *DBClient) RecordEquity(ctx context.Context, brokerID int64, equity decimal.Decimal) error {
+	query := `
+        INSERT INTO algotrade.equity_tracking_tb 
+        (broker_account_id, equity)
+        VALUES ($1, $2)
+    `
+	_, err := c.db.ExecContext(ctx, query, brokerID, equity)
+	return err
 }

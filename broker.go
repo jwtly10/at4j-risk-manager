@@ -15,3 +15,9 @@ type BrokerAccount struct {
 	CreatedAt      time.Time `db:"created_at"`
 	UpdatedAt      time.Time `db:"updated_at"`
 }
+
+type BrokerWithLastEquity struct {
+	BrokerAccount
+	// LastEquityUpdate is the last time the equity was updated in UTC. MUST BE CONVERTED TO THE REQURIED TIMEZONE WHEN USED
+	LastEquityUpdate *time.Time `db:"last_equity_update"` // May be nil
+}
