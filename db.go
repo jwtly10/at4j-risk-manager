@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
-	"github.com/shopspring/decimal"
 )
 
 type DBClient struct {
@@ -86,7 +85,7 @@ func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity
 }
 
 // RecordEquityUpdate records the equity update for a broker account
-func (c *DBClient) RecordEquity(ctx context.Context, brokerID int64, equity decimal.Decimal) error {
+func (c *DBClient) RecordEquity(ctx context.Context, brokerID int64, equity float64) error {
 	query := `
         INSERT INTO algotrade.equity_tracking_tb 
         (broker_account_id, equity)

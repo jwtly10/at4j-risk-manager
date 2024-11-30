@@ -23,6 +23,18 @@ type PostgresConfig struct {
 
 // TODO: How should we handle different brokers (oanda/mt5 adapter service)
 type BrokersConfig struct {
+	Oanda OandaConfig
+	MT5   MT5Config
+}
+
+type OandaConfig struct {
+	ApiKey  string
+	BaseUrl string
+}
+
+type MT5Config struct {
+	ApiKey  string
+	BaseUrl string
 }
 
 func LoadConfig() (*Config, error) {
@@ -45,7 +57,20 @@ func LoadConfig() (*Config, error) {
 		DBName:   os.Getenv("DB_NAME"),
 	}
 
-	cfg.Brokers = BrokersConfig{}
+	o := OandaConfig{
+		ApiKey:  os.Getenv("OANDA_API_KEY"),
+		BaseUrl: os.Getenv("OANDA_API_URL"),
+	}
+
+	m := MT5Config{
+		ApiKey:  os.Getenv("MT5_API_KEY"),
+		BaseUrl: os.Getenv("MT5_API_URL"),
+	}
+
+	cfg.Brokers = BrokersConfig{
+		Oanda: o,
+		MT5:   m,
+	}
 
 	if err := cfg.DB.validate(); err != nil {
 		return nil, err
@@ -67,6 +92,26 @@ func (p PostgresConfig) validate() error {
 		if value == "" {
 			return fmt.Errorf("%s is required", env)
 		}
+	}
+
+	return nil
+}
+
+func (b BrokersConfig) validate() error {
+	// Validate Oanda configuration
+	if b.Oanda.ApiKey == "" {
+		return fmt.Errorf("OANDA_API_KEY is required")
+	}
+	if b.Oanda.BaseUrl == "" {
+		return fmt.Errorf("OANDA_API_URL is required")
+	}
+
+	// Validate MT5 configuration
+	if b.MT5.ApiKey == "" {
+		return fmt.Errorf("MT5_API_KEY is required")
+	}
+	if b.MT5.BaseUrl == "" {
+		return fmt.Errorf("MT5_API_URL is required")
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,20 +30,28 @@ func main() {
 
 	dbClient := NewDBClient(db)
 
+	// Configure broker specific time configs
 	configs := map[string]BrokerTimeConfig{
 		"OANDA": {
 			Timezone:          "UTC",
-			DailyUpdateHour:   21,
-			DailyUpdateMinute: 13,
+			DailyUpdateHour:   18,
+			DailyUpdateMinute: 54,
 		},
 		"MT5_FTMO": {
 			Timezone:          "Europe/Prague",
-			DailyUpdateHour:   22,
-			DailyUpdateMinute: 13,
+			DailyUpdateHour:   19,
+			DailyUpdateMinute: 55,
 		},
 	}
 
-	tracker := NewEquityTracker(dbClient, configs, 1*time.Second)
+	// Configure broker adapters
+	brokerAdapters := make(map[string]BrokerAdapter)
+	oandaAdapter, _ := NewAdapter(http.DefaultClient, BrokerTypeOanda, cfg.Brokers)
+	brokerAdapters[BrokerTypeOanda] = oandaAdapter
+	ftmoAdapter, _ := NewAdapter(http.DefaultClient, BrokerTypeMT5_FTMO, cfg.Brokers)
+	brokerAdapters[BrokerTypeMT5_FTMO] = ftmoAdapter
+
+	tracker := NewEquityTracker(dbClient, configs, brokerAdapters, 1*time.Second)
 
 	go func() {
 		if err := tracker.Start(); err != nil {

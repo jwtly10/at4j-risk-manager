@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"time"
-
-	"github.com/shopspring/decimal"
 )
 
 type brokerRepository interface {
 	GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity, error)
-	RecordEquity(ctx context.Context, brokerID int64, equity decimal.Decimal) error
+	RecordEquity(ctx context.Context, brokerID int64, equity float64) error
 }
 
 type BrokerTimeConfig struct {
@@ -22,24 +19,27 @@ type BrokerTimeConfig struct {
 }
 
 type EquityTracker struct {
-	brokerRepo    brokerRepository
-	brokerConfigs map[string]BrokerTimeConfig
-	checkInterval time.Duration
-	stop          chan struct{}
-	timeProvider  TimeProvider
+	brokerRepo     brokerRepository
+	brokerConfigs  map[string]BrokerTimeConfig
+	brokerAdapters map[string]BrokerAdapter
+	checkInterval  time.Duration
+	stop           chan struct{}
+	timeProvider   TimeProvider
 }
 
 func NewEquityTracker(
 	brokerRepo brokerRepository,
 	brokerConfigs map[string]BrokerTimeConfig,
+	brokerAdapters map[string]BrokerAdapter,
 	checkInterval time.Duration,
 ) *EquityTracker {
 	return &EquityTracker{
-		brokerRepo:    brokerRepo,
-		brokerConfigs: brokerConfigs,
-		checkInterval: checkInterval,
-		stop:          make(chan struct{}),
-		timeProvider:  RealTimeProvider{},
+		brokerRepo:     brokerRepo,
+		brokerConfigs:  brokerConfigs,
+		brokerAdapters: brokerAdapters,
+		checkInterval:  checkInterval,
+		stop:           make(chan struct{}),
+		timeProvider:   RealTimeProvider{},
 	}
 }
 
@@ -48,10 +48,12 @@ func (et *EquityTracker) Start() error {
 	ticket := time.NewTicker(et.checkInterval)
 	defer ticket.Stop()
 
+	ctx := context.Background()
+
 	for {
 		select {
 		case <-ticket.C:
-			if err := et.checkAndUpdateEquity(); err != nil {
+			if err := et.checkAndUpdateEquity(ctx); err != nil {
 				log.Printf("Error checking and updating equity: %v", err)
 			}
 		case <-et.stop:
@@ -67,9 +69,9 @@ func (et *EquityTracker) Stop() {
 
 // checkAndUpdateEquity checks and updates the equity for all active brokers
 // based on the configured check configurations
-func (et *EquityTracker) checkAndUpdateEquity() error {
+func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 	log.Println("Checking and updating equity")
-	accounts, err := et.brokerRepo.GetActiveBrokers(context.TODO())
+	accounts, err := et.brokerRepo.GetActiveBrokers(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting all active brokers: %v", err)
 	}
@@ -83,9 +85,16 @@ func (et *EquityTracker) checkAndUpdateEquity() error {
 			continue
 		}
 
+		adapter, exists := et.brokerAdapters[account.BrokerType]
+		if !exists {
+			log.Printf("No adapter found for broker type %s. Skipping.", account.BrokerType)
+			continue
+		}
+
 		location, err := time.LoadLocation(config.Timezone)
 		if err != nil {
-			return fmt.Errorf("error loading timezone %s: %v for broker type %v", config.Timezone, account.BrokerType, err)
+			log.Printf("error loading timezone %s: %v for broker type %v", config.Timezone, account.BrokerType, err)
+			continue
 		}
 
 		now := et.timeProvider.Now().In(location)
@@ -97,21 +106,25 @@ func (et *EquityTracker) checkAndUpdateEquity() error {
 				lastUpdateLocal := account.LastEquityUpdate.In(location)
 
 				if isSameDay(now, lastUpdateLocal) {
-					// TODO: Remove this log statement
+					// TODO: Remove this log statement when on prod
 					log.Printf("Equity already updated for broker %s today", account.BrokerType)
 					continue
 				}
 			}
 			log.Printf("Updating equity for broker %s", account.BrokerType)
 
-			// TODO: Implement  get real equity from the brokers api
-
-			// Random number betwen 0 and 100
-			equity := 100 * rand.Float64()
-			err := et.brokerRepo.RecordEquity(context.TODO(), account.ID, decimal.NewFromFloat(equity))
+			equity, err := adapter.GetEquity(ctx, account.AccountID)
 			if err != nil {
-				return fmt.Errorf("error recording equity for broker %s: %v", account.BrokerType, err)
+				log.Printf("Error getting equity for broker %s: %v", account.BrokerType, err)
+				continue
 			}
+
+			err = et.brokerRepo.RecordEquity(ctx, account.ID, equity)
+			if err != nil {
+				log.Printf("error recording equity for broker %s: %v", account.BrokerType, err)
+			}
+
+			log.Printf("Equity updated for broker %s: %.2f", account.BrokerType, equity)
 		}
 	}
 
