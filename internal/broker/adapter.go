@@ -1,10 +1,11 @@
-package main
+package broker
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jwtly10/at4j-risk-manager/internal/config"
 	"io"
 	"net/http"
 	"strconv"
@@ -36,7 +37,7 @@ type MT5Adapter struct {
 }
 
 // NewAdapter is a factory function that returns a new broker adapter based on the given configuration
-func NewAdapter(client *http.Client, brokerType string, config BrokersConfig) (BrokerAdapter, error) {
+func NewAdapter(client *http.Client, brokerType string, config config.BrokersConfig) (BrokerAdapter, error) {
 	switch brokerType {
 	case Oanda:
 		return newOandaAdapter(client, config.Oanda), nil
@@ -48,7 +49,7 @@ func NewAdapter(client *http.Client, brokerType string, config BrokersConfig) (B
 }
 
 // newOandaAdapter returns a new Oanda adapter based on the given configuration
-func newOandaAdapter(client *http.Client, config OandaConfig) *OandaAdapter {
+func newOandaAdapter(client *http.Client, config config.OandaConfig) *OandaAdapter {
 	return &OandaAdapter{
 		client:  client,
 		apiKey:  config.ApiKey,
@@ -57,7 +58,7 @@ func newOandaAdapter(client *http.Client, config OandaConfig) *OandaAdapter {
 }
 
 // newMT5Adapter returns a new MT5 adapter based on the given configuration
-func newMT5Adapter(client *http.Client, config MT5Config) *MT5Adapter {
+func newMT5Adapter(client *http.Client, config config.MT5Config) *MT5Adapter {
 	return &MT5Adapter{
 		client:  client,
 		apiKey:  config.ApiKey,

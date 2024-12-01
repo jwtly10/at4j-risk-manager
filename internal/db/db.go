@@ -1,18 +1,20 @@
-package main
+package db
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/jwtly10/at4j-risk-manager/internal/broker"
+	"github.com/jwtly10/at4j-risk-manager/internal/config"
 
 	_ "github.com/lib/pq"
 )
 
-type DBClient struct {
+type Client struct {
 	db *sql.DB
 }
 
-func NewDBConnection(config PostgresConfig) (*sql.DB, error) {
+func NewDBConnection(config config.PostgresConfig) (*sql.DB, error) {
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		config.URL, config.Port, config.Username, config.Password, config.DBName)
 
@@ -29,12 +31,12 @@ func NewDBConnection(config PostgresConfig) (*sql.DB, error) {
 
 }
 
-func NewDBClient(db *sql.DB) *DBClient {
-	return &DBClient{db: db}
+func NewDBClient(db *sql.DB) *Client {
+	return &Client{db: db}
 }
 
 // GetActiveBrokers returns all active broker accounts and when equity was last tracked
-func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity, error) {
+func (c *Client) GetActiveBrokers(ctx context.Context) ([]broker.BrokerWithLastEquity, error) {
 	query := `
         SELECT 
             b.id, 
@@ -62,9 +64,9 @@ func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity
 	}
 	defer rows.Close()
 
-	var accounts []BrokerWithLastEquity
+	var accounts []broker.BrokerWithLastEquity
 	for rows.Next() {
-		var account BrokerWithLastEquity
+		var account broker.BrokerWithLastEquity
 		if err := rows.Scan(
 			&account.ID,
 			&account.BrokerName,
@@ -85,7 +87,7 @@ func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity
 }
 
 // RecordEquity records the equity update for a broker account
-func (c *DBClient) RecordEquity(ctx context.Context, brokerID int64, equity float64) error {
+func (c *Client) RecordEquity(ctx context.Context, brokerID int64, equity float64) error {
 	query := `
         INSERT INTO algotrade.equity_tracking_tb 
         (broker_account_id, equity)

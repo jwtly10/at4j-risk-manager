@@ -1,14 +1,16 @@
-package main
+package jobs
 
 import (
 	"context"
 	"fmt"
+	"github.com/jwtly10/at4j-risk-manager/internal/broker"
+	"github.com/jwtly10/at4j-risk-manager/internal/utils"
 	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"time"
 )
 
 type brokerRepository interface {
-	GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity, error)
+	GetActiveBrokers(ctx context.Context) ([]broker.BrokerWithLastEquity, error)
 	RecordEquity(ctx context.Context, brokerID int64, equity float64) error
 }
 
@@ -21,16 +23,16 @@ type BrokerTimeConfig struct {
 type EquityTracker struct {
 	brokerRepo     brokerRepository
 	brokerConfigs  map[string]BrokerTimeConfig
-	brokerAdapters map[string]BrokerAdapter
+	brokerAdapters map[string]broker.BrokerAdapter
 	checkInterval  time.Duration
 	stop           chan struct{}
-	timeProvider   TimeProvider
+	timeProvider   utils.TimeProvider
 }
 
 func NewEquityTracker(
 	brokerRepo brokerRepository,
 	brokerConfigs map[string]BrokerTimeConfig,
-	brokerAdapters map[string]BrokerAdapter,
+	brokerAdapters map[string]broker.BrokerAdapter,
 	checkInterval time.Duration,
 ) *EquityTracker {
 	return &EquityTracker{
@@ -39,7 +41,7 @@ func NewEquityTracker(
 		brokerAdapters: brokerAdapters,
 		checkInterval:  checkInterval,
 		stop:           make(chan struct{}),
-		timeProvider:   RealTimeProvider{},
+		timeProvider:   utils.RealTimeProvider{},
 	}
 }
 

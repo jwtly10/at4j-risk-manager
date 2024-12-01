@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"github.com/jwtly10/at4j-risk-manager/internal/broker"
+	"github.com/jwtly10/at4j-risk-manager/internal/config"
+	"github.com/jwtly10/at4j-risk-manager/internal/db"
+	"github.com/jwtly10/at4j-risk-manager/internal/jobs"
 	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"net/http"
 	"os"
@@ -19,21 +23,21 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	cfg, err := LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.Fatalf("Failed to load environment configuration: %v", err)
 	}
 
-	db, err := NewDBConnection(cfg.DB)
+	conn, err := db.NewDBConnection(cfg.DB)
 	if err != nil {
 		logger.Fatalf("Failed to connect connecting to database: %v", err)
 	}
-	defer db.Close()
+	defer conn.Close()
 
-	dbClient := NewDBClient(db)
+	dbClient := db.NewDBClient(conn)
 
 	// Configure broker specific time configs
-	configs := map[string]BrokerTimeConfig{
+	configs := map[string]jobs.BrokerTimeConfig{
 		"OANDA": {
 			Timezone:          "UTC",
 			DailyUpdateHour:   21,
@@ -47,13 +51,13 @@ func main() {
 	}
 
 	// Configure broker adapters
-	brokerAdapters := make(map[string]BrokerAdapter)
-	oandaAdapter, _ := NewAdapter(http.DefaultClient, Oanda, cfg.Brokers)
-	brokerAdapters[Oanda] = oandaAdapter
-	ftmoAdapter, _ := NewAdapter(http.DefaultClient, MT5FTMO, cfg.Brokers)
-	brokerAdapters[MT5FTMO] = ftmoAdapter
+	brokerAdapters := make(map[string]broker.BrokerAdapter)
+	oandaAdapter, _ := broker.NewAdapter(http.DefaultClient, broker.Oanda, cfg.Brokers)
+	brokerAdapters[broker.Oanda] = oandaAdapter
+	ftmoAdapter, _ := broker.NewAdapter(http.DefaultClient, broker.MT5FTMO, cfg.Brokers)
+	brokerAdapters[broker.MT5FTMO] = ftmoAdapter
 
-	tracker := NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
+	tracker := jobs.NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
 
 	go func() {
 		if err := tracker.Start(); err != nil {

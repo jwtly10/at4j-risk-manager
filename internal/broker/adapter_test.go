@@ -1,10 +1,11 @@
 //go:build integration
 
-package main
+package broker
 
 import (
 	"context"
 	"fmt"
+	"github.com/jwtly10/at4j-risk-manager/internal/config"
 	"net/http"
 	"os"
 	"testing"
@@ -13,12 +14,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func setupTestEnv(t *testing.T) BrokersConfig {
+func setupTestEnv(t *testing.T) config.BrokersConfig {
 	t.Helper()
 
-	if err := godotenv.Load(); err != nil {
-		t.Fatalf("failed to load environment variables: %v", err)
-	}
+	_ = godotenv.Load()
 
 	// Validate required env vars are present
 	requiredVars := []string{"OANDA_API_KEY", "OANDA_API_URL", "TEST_OANDA_ACCOUNT_ID", "MT5_API_KEY", "MT5_API_URL", "TEST_MT5_ACCOUNT_ID"}
@@ -28,31 +27,31 @@ func setupTestEnv(t *testing.T) BrokersConfig {
 		}
 	}
 
-	o := OandaConfig{
+	o := config.OandaConfig{
 		ApiKey:  os.Getenv("OANDA_API_KEY"),
 		BaseUrl: os.Getenv("OANDA_API_URL"),
 	}
 
-	m := MT5Config{
+	m := config.MT5Config{
 		ApiKey:  os.Getenv("MT5_API_KEY"),
 		BaseUrl: os.Getenv("MT5_API_URL"),
 	}
 
-	return BrokersConfig{
+	return config.BrokersConfig{
 		Oanda: o,
 		MT5:   m,
 	}
 }
 
 func TestGetAccountFromOandaIntegration(t *testing.T) {
-	config := setupTestEnv(t)
+	cfg := setupTestEnv(t)
 	accountIdUnderTest := os.Getenv("TEST_OANDA_ACCOUNT_ID")
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	client, err := NewAdapter(httpClient, "OANDA", BrokersConfig{Oanda: config.Oanda})
+	client, err := NewAdapter(httpClient, "OANDA", config.BrokersConfig{Oanda: cfg.Oanda})
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -74,14 +73,14 @@ func TestGetAccountFromOandaIntegration(t *testing.T) {
 }
 
 func TestGetAccountFromMT5Integration(t *testing.T) {
-	config := setupTestEnv(t)
+	cfg := setupTestEnv(t)
 	accountIdUnderTest := os.Getenv("TEST_MT5_ACCOUNT_ID")
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	client, err := NewAdapter(httpClient, "MT5_FTMO", BrokersConfig{MT5: config.MT5})
+	client, err := NewAdapter(httpClient, "MT5_FTMO", config.BrokersConfig{MT5: cfg.MT5})
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
