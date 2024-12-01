@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -52,7 +53,7 @@ func TestGetAccountFromOandaIntegration(t *testing.T) {
 		Timeout: 10 * time.Second,
 	}
 
-	client, err := NewAdapter("OANDA", BrokersConfig{Oanda: config.Oanda}, httpClient)
+	client, err := NewAdapter(httpClient, "OANDA", BrokersConfig{Oanda: config.Oanda})
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -65,14 +66,12 @@ func TestGetAccountFromOandaIntegration(t *testing.T) {
 		t.Fatalf("failed to get equity: %v", err)
 	}
 
+	// We can just assert 0 because if the account is valid, it should have some equity
 	if e <= 0 {
 		t.Errorf("expected equity to be greater than 0, got %f", e)
 	}
 
-	t.Logf("Equity: %f", e)
-	if e != 89652.172300 {
-		t.Errorf("expected equity to be 89652.172300, got %f", e)
-	}
+	fmt.Println("Oanda Equity: ", e)
 }
 
 func TestGetAccountFromMT5Integration(t *testing.T) {
@@ -83,7 +82,7 @@ func TestGetAccountFromMT5Integration(t *testing.T) {
 		Timeout: 10 * time.Second,
 	}
 
-	client, err := NewAdapter("MT5_FTMO", BrokersConfig{MT5: config.MT5}, httpClient)
+	client, err := NewAdapter(httpClient, "MT5_FTMO", BrokersConfig{MT5: config.MT5})
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -100,8 +99,5 @@ func TestGetAccountFromMT5Integration(t *testing.T) {
 		t.Errorf("expected equity to be greater than 0, got %f", e)
 	}
 
-	t.Logf("Equity: %f", e)
-	if e != 89652.172300 {
-		t.Errorf("expected equity to be 89652.172300, got %f", e)
-	}
+	fmt.Println("MT5 Equity: ", e)
 }

@@ -39,8 +39,8 @@ func main() {
 		},
 		"MT5_FTMO": {
 			Timezone:          "Europe/Prague",
-			DailyUpdateHour:   19,
-			DailyUpdateMinute: 55,
+			DailyUpdateHour:   16,
+			DailyUpdateMinute: 23,
 		},
 	}
 
