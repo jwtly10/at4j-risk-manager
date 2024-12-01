@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"time"
 )
 
@@ -45,6 +45,9 @@ func NewEquityTracker(
 
 // Start starts the equity tracker with the given configuration
 func (et *EquityTracker) Start() error {
+
+	logger.Infof("Starting equity tracker with check interval %v", et.checkInterval)
+
 	ticket := time.NewTicker(et.checkInterval)
 	defer ticket.Stop()
 
@@ -54,7 +57,7 @@ func (et *EquityTracker) Start() error {
 		select {
 		case <-ticket.C:
 			if err := et.checkAndUpdateEquity(ctx); err != nil {
-				log.Printf("Error checking and updating equity: %v", err)
+				logger.Infof("Error checking and updating equity: %v", err)
 			}
 		case <-et.stop:
 			return nil
@@ -70,61 +73,60 @@ func (et *EquityTracker) Stop() {
 // checkAndUpdateEquity checks and updates the equity for all active brokers
 // based on the configured check configurations
 func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
-	log.Println("Checking and updating equity")
+	logger.Infof("Running equity check job")
 	accounts, err := et.brokerRepo.GetActiveBrokers(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting all active brokers: %v", err)
 	}
 
-	log.Printf("Found %d active brokers", len(accounts))
+	logger.Debugf("Found %d active brokers", len(accounts))
 
 	for _, account := range accounts {
 		config, exists := et.brokerConfigs[account.BrokerType]
 		if !exists {
-			log.Printf("No configuration found for broker type %s. Skipping.", account.BrokerType)
+			logger.Warnf("No configuration found for broker type %s. Skipping.", account.BrokerType)
 			continue
 		}
 
 		adapter, exists := et.brokerAdapters[account.BrokerType]
 		if !exists {
-			log.Printf("No adapter found for broker type %s. Skipping.", account.BrokerType)
+			logger.Warnf("No adapter found for broker type %s. Skipping.", account.BrokerType)
 			continue
 		}
 
 		location, err := time.LoadLocation(config.Timezone)
 		if err != nil {
-			log.Printf("error loading timezone %s: %v for broker type %v", config.Timezone, account.BrokerType, err)
+			logger.Errorf("error loading timezone %s: %v for broker type %v", config.Timezone, account.BrokerType, err)
 			continue
 		}
 
 		now := et.timeProvider.Now().In(location)
 
 		if isUpdateTime(now, config.DailyUpdateHour, config.DailyUpdateMinute) {
-			// If theres NO last equity, we should always update it
+			// If there's NO last equity, we should always update it
 			if account.LastEquityUpdate != nil {
 				// Else handle the case when equity has already been tracked today
 				lastUpdateLocal := account.LastEquityUpdate.In(location)
 
 				if isSameDay(now, lastUpdateLocal) {
-					// TODO: Remove this log statement when on prod
-					log.Printf("Equity already updated for broker %s today", account.BrokerType)
+					logger.Debugf("Equity already updated for broker %s today", account.BrokerType)
 					continue
 				}
 			}
-			log.Printf("Updating equity for broker %s", account.BrokerType)
+			logger.Infof("Updating equity for broker %s", account.BrokerType)
 
 			equity, err := adapter.GetEquity(ctx, account.AccountID)
 			if err != nil {
-				log.Printf("Error getting equity for broker %s: %v", account.BrokerType, err)
+				logger.Errorf("Error getting equity for broker %s: %v", account.BrokerType, err)
 				continue
 			}
 
 			err = et.brokerRepo.RecordEquity(ctx, account.ID, equity)
 			if err != nil {
-				log.Printf("error recording equity for broker %s: %v", account.BrokerType, err)
+				logger.Errorf("error recording equity for broker %s: %v", account.BrokerType, err)
 			}
 
-			log.Printf("Equity updated for broker %s: %.2f", account.BrokerType, equity)
+			logger.Infof("Equity updated for broker %s: %.2f", account.BrokerType, equity)
 		}
 	}
 

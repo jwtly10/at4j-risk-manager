@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -10,7 +11,13 @@ import (
 type Config struct {
 	DB      PostgresConfig
 	Brokers BrokersConfig
+	Jobs    JobsConfig
 	Port    string
+}
+
+type JobsConfig struct {
+	// Interval in seconds to check equity
+	EquityCheckInterval int
 }
 
 type PostgresConfig struct {
@@ -49,6 +56,14 @@ func LoadConfig() (*Config, error) {
 		cfg.Port = "8001"
 	}
 
+	eqInt, err := strconv.Atoi(os.Getenv("EQUITY_CHECK_INTERVAL"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse EQUITY_CHECK_INTERVAL: %v", err)
+	}
+	cfg.Jobs = JobsConfig{
+		EquityCheckInterval: eqInt,
+	}
+
 	cfg.DB = PostgresConfig{
 		Username: os.Getenv("DB_USERNAME"),
 		Password: os.Getenv("DB_PASSWORD"),
@@ -73,6 +88,14 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if err := cfg.DB.validate(); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.Brokers.validate(); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.Jobs.validate(); err != nil {
 		return nil, err
 	}
 
@@ -112,6 +135,14 @@ func (b BrokersConfig) validate() error {
 	}
 	if b.MT5.BaseUrl == "" {
 		return fmt.Errorf("MT5_API_URL is required")
+	}
+
+	return nil
+}
+
+func (j JobsConfig) validate() error {
+	if j.EquityCheckInterval == 0 {
+		return fmt.Errorf("EQUITY_CHECK_INTERVAL is required and CANNOT be 0")
 	}
 
 	return nil

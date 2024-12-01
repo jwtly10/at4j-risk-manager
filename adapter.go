@@ -103,8 +103,6 @@ func (o *OandaAdapter) GetEquity(ctx context.Context, accountId string) (float64
 func (m *MT5Adapter) GetEquity(ctx context.Context, accountId string) (float64, error) {
 	url := m.baseURL + "/accounts/" + accountId
 
-	fmt.Println(url)
-
 	headers := map[string]string{
 		"x-api-key": m.apiKey,
 	}

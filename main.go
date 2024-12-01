@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	logger.InitLogger()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -19,12 +21,12 @@ func main() {
 
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load environment configuration: %v", err)
+		logger.Fatalf("Failed to load environment configuration: %v", err)
 	}
 
 	db, err := NewDBConnection(cfg.DB)
 	if err != nil {
-		log.Fatalf("Failed to connect connecting to database: %v", err)
+		logger.Fatalf("Failed to connect connecting to database: %v", err)
 	}
 	defer db.Close()
 
@@ -34,13 +36,13 @@ func main() {
 	configs := map[string]BrokerTimeConfig{
 		"OANDA": {
 			Timezone:          "UTC",
-			DailyUpdateHour:   18,
-			DailyUpdateMinute: 54,
+			DailyUpdateHour:   21,
+			DailyUpdateMinute: 15,
 		},
 		"MT5_FTMO": {
 			Timezone:          "Europe/Prague",
-			DailyUpdateHour:   16,
-			DailyUpdateMinute: 23,
+			DailyUpdateHour:   18,
+			DailyUpdateMinute: 9,
 		},
 	}
 
@@ -51,25 +53,23 @@ func main() {
 	ftmoAdapter, _ := NewAdapter(http.DefaultClient, BrokerTypeMT5_FTMO, cfg.Brokers)
 	brokerAdapters[BrokerTypeMT5_FTMO] = ftmoAdapter
 
-	tracker := NewEquityTracker(dbClient, configs, brokerAdapters, 1*time.Second)
+	tracker := NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
 
 	go func() {
 		if err := tracker.Start(); err != nil {
-			log.Printf("Error starting equity tracker: %v", err)
+			logger.Errorf("Error starting equity tracker: %v", err)
 			cancel()
 		}
 	}()
 
-	log.Println("Equity tracking service started. Press Ctrl+C to stop")
-
 	select {
 	case sig := <-sigChan:
-		log.Printf("Received shutdown signal: %v", sig)
+		logger.Infof("Received shutdown signal: %v", sig)
 	case <-ctx.Done():
-		log.Println("Shutting down due to error")
+		logger.Infof("Shutting down due to error")
 	}
 
-	log.Println("Initiating graceful shutdown...")
+	logger.Infof("Initiating graceful shutdown...")
 
 	shutdownCtx, shutdownCancel :=
 		context.WithTimeout(context.Background(), 2*time.Second)
@@ -79,5 +79,5 @@ func main() {
 
 	<-shutdownCtx.Done()
 
-	log.Println("Service stopped")
+	logger.Infof("Service stopped")
 }
