@@ -48,10 +48,10 @@ func main() {
 
 	// Configure broker adapters
 	brokerAdapters := make(map[string]BrokerAdapter)
-	oandaAdapter, _ := NewAdapter(http.DefaultClient, BrokerTypeOanda, cfg.Brokers)
-	brokerAdapters[BrokerTypeOanda] = oandaAdapter
-	ftmoAdapter, _ := NewAdapter(http.DefaultClient, BrokerTypeMT5_FTMO, cfg.Brokers)
-	brokerAdapters[BrokerTypeMT5_FTMO] = ftmoAdapter
+	oandaAdapter, _ := NewAdapter(http.DefaultClient, Oanda, cfg.Brokers)
+	brokerAdapters[Oanda] = oandaAdapter
+	ftmoAdapter, _ := NewAdapter(http.DefaultClient, MT5FTMO, cfg.Brokers)
+	brokerAdapters[MT5FTMO] = ftmoAdapter
 
 	tracker := NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
 

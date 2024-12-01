@@ -23,7 +23,7 @@ func newCustomHandler(opts *slog.HandlerOptions) slog.Handler {
 	}
 }
 
-func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *customHandler) Handle(_ context.Context, r slog.Record) error {
 	timeStr := r.Time.Format("2006-01-02 15:04:05.000")
 	level := strings.ToUpper(r.Level.String())
 	caller := ""

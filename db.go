@@ -84,7 +84,7 @@ func (c *DBClient) GetActiveBrokers(ctx context.Context) ([]BrokerWithLastEquity
 	return accounts, rows.Err()
 }
 
-// RecordEquityUpdate records the equity update for a broker account
+// RecordEquity records the equity update for a broker account
 func (c *DBClient) RecordEquity(ctx context.Context, brokerID int64, equity float64) error {
 	query := `
         INSERT INTO algotrade.equity_tracking_tb 

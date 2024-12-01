@@ -28,7 +28,6 @@ type PostgresConfig struct {
 	DBName   string
 }
 
-// TODO: How should we handle different brokers (oanda/mt5 adapter service)
 type BrokersConfig struct {
 	Oanda OandaConfig
 	MT5   MT5Config

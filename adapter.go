@@ -12,8 +12,8 @@ import (
 
 // Supported broker types
 const (
-	BrokerTypeOanda    = "OANDA"
-	BrokerTypeMT5_FTMO = "MT5_FTMO"
+	Oanda   = "OANDA"
+	MT5FTMO = "MT5_FTMO"
 )
 
 // BrokerAdapter defines the interface that all broker adapters must implement
@@ -38,9 +38,9 @@ type MT5Adapter struct {
 // NewAdapter is a factory function that returns a new broker adapter based on the given configuration
 func NewAdapter(client *http.Client, brokerType string, config BrokersConfig) (BrokerAdapter, error) {
 	switch brokerType {
-	case BrokerTypeOanda:
+	case Oanda:
 		return newOandaAdapter(client, config.Oanda), nil
-	case BrokerTypeMT5_FTMO:
+	case MT5FTMO:
 		return newMT5Adapter(client, config.MT5), nil
 	default:
 		return nil, fmt.Errorf("unsupported broker type: %s", brokerType)

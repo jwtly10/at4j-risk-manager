@@ -1,26 +1,9 @@
 package main
 
 import (
-	"context"
 	"testing"
 	"time"
 )
-
-type MockTimeProvider struct {
-	CurrentTime time.Time
-}
-
-func (m MockTimeProvider) Now() time.Time {
-	return m.CurrentTime
-}
-
-type mockBrokerRepository struct {
-	accounts []BrokerAccount
-}
-
-func (m *mockBrokerRepository) GetAllActiveBrokers(ctx context.Context) ([]BrokerAccount, error) {
-	return m.accounts, nil
-}
 
 func TestIsUpdateTime(t *testing.T) {
 	tests := []struct {
