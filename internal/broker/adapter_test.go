@@ -69,7 +69,7 @@ func TestGetAccountFromOandaIntegration(t *testing.T) {
 		t.Errorf("expected equity to be greater than 0, got %f", e)
 	}
 
-	fmt.Println("Oanda Equity: ", e)
+	fmt.Println("Oanda LastEquity: ", e)
 }
 
 func TestGetAccountFromMT5Integration(t *testing.T) {
@@ -97,5 +97,5 @@ func TestGetAccountFromMT5Integration(t *testing.T) {
 		t.Errorf("expected equity to be greater than 0, got %f", e)
 	}
 
-	fmt.Println("MT5 Equity: ", e)
+	fmt.Println("MT5 LastEquity: ", e)
 }

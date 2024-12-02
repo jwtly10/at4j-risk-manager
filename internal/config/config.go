@@ -13,6 +13,7 @@ type Config struct {
 	Brokers BrokersConfig
 	Jobs    JobsConfig
 	Port    string
+	ApiKey  string
 }
 
 type JobsConfig struct {
@@ -53,6 +54,14 @@ func LoadConfig() (*Config, error) {
 
 	if os.Getenv("PORT") == "" {
 		cfg.Port = "8001"
+	} else {
+		cfg.Port = os.Getenv("PORT")
+	}
+
+	if os.Getenv("INTERNAL_API_KEY") == "" {
+		return nil, fmt.Errorf("INTERNAL_API_KEY is required")
+	} else {
+		cfg.ApiKey = os.Getenv("INTERNAL_API_KEY")
 	}
 
 	eqInt, err := strconv.Atoi(os.Getenv("EQUITY_CHECK_INTERVAL"))

@@ -3,9 +3,11 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jwtly10/at4j-risk-manager/internal/broker"
 	"github.com/jwtly10/at4j-risk-manager/internal/config"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -95,4 +97,32 @@ func (c *Client) RecordEquity(ctx context.Context, brokerID int64, equity float6
     `
 	_, err := c.db.ExecContext(ctx, query, brokerID, equity)
 	return err
+}
+
+type EquityData struct {
+	Equity    float64
+	UpdatedAt time.Time
+}
+
+// GetLatestEquity returns the latest equity data for a broker account
+func (c *Client) GetLatestEquity(ctx context.Context, brokerId string) (*EquityData, error) {
+	query := `
+        SELECT et.equity, et.created_at
+        FROM algotrade.equity_tracking_tb et
+        INNER JOIN algotrade.broker_accounts_tb ba ON et.broker_account_id = ba.id
+        WHERE ba.account_id = $1
+        ORDER BY et.created_at DESC
+        LIMIT 1
+    `
+
+	var data EquityData
+	err := c.db.QueryRowContext(ctx, query, brokerId).Scan(&data.Equity, &data.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("no equity data found for broker ID %s", brokerId)
+		}
+		return nil, fmt.Errorf("error fetching equity data: %w", err)
+	}
+
+	return &data, nil
 }

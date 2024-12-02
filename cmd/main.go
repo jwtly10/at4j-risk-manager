@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"github.com/jwtly10/at4j-risk-manager/internal/api"
 	"github.com/jwtly10/at4j-risk-manager/internal/broker"
 	"github.com/jwtly10/at4j-risk-manager/internal/config"
 	"github.com/jwtly10/at4j-risk-manager/internal/db"
@@ -57,11 +59,20 @@ func main() {
 	ftmoAdapter, _ := broker.NewAdapter(http.DefaultClient, broker.MT5FTMO, cfg.Brokers)
 	brokerAdapters[broker.MT5FTMO] = ftmoAdapter
 
+	// Start equity tracker job
 	tracker := jobs.NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
-
 	go func() {
 		if err := tracker.Start(); err != nil {
 			logger.Errorf("Error starting equity tracker: %v", err)
+			cancel()
+		}
+	}()
+
+	// Start API server
+	server := api.NewServer(cfg, dbClient)
+	go func() {
+		if err := server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Errorf("HTTP server error: %v", err)
 			cancel()
 		}
 	}()
@@ -79,7 +90,15 @@ func main() {
 		context.WithTimeout(context.Background(), 2*time.Second)
 	defer shutdownCancel()
 
+	// Nicely shutdown everything
+
+	// Stop jobs
 	tracker.Stop()
+
+	// Stop API server
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Errorf("Error shutting down HTTP server: %v", err)
+	}
 
 	<-shutdownCtx.Done()
 

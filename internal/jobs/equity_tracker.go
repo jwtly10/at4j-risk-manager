@@ -111,7 +111,7 @@ func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 				lastUpdateLocal := account.LastEquityUpdate.In(location)
 
 				if isSameDay(now, lastUpdateLocal) {
-					logger.Debugf("Equity already updated for broker %s today", account.BrokerType)
+					logger.Debugf("LastEquity already updated for broker %s today", account.BrokerType)
 					continue
 				}
 			}
@@ -128,7 +128,7 @@ func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 				logger.Errorf("error recording equity for broker %s: %v", account.BrokerType, err)
 			}
 
-			logger.Infof("Equity updated for broker %s: %.2f", account.BrokerType, equity)
+			logger.Infof("LastEquity updated for broker %s: %.2f", account.BrokerType, equity)
 		}
 	}
 
