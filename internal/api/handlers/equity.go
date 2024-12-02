@@ -28,6 +28,26 @@ func NewEquityHandler(dbClient *db.Client) *EquityHandler {
 	}
 }
 
+// GetLatestEquity returns the most recent equity value for a specified trading account.
+//
+// It accepts an accountId as a query parameter and returns the equity data in JSON format.
+//
+// Query Parameters:
+//   - accountId: (required) The ID of the trading account
+//
+// Returns:
+//   - 200: JSON response with account equity data
+//   - 400: If accountId parameter is missing
+//   - 404: If no equity data is found for the account
+//   - 500: If an internal error occurs
+//
+// Response format:
+//
+//	{
+//	  "accountId": "string",
+//	  "lastEquity": float64,
+//	  "updatedAt": "RFC3339 timestamp"
+//	}
 func (h *EquityHandler) GetLatestEquity(w http.ResponseWriter, r *http.Request) {
 	accountId := r.URL.Query().Get("accountId")
 	if accountId == "" {
