@@ -1,0 +1,63 @@
+name: Go CI - Build, Push and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push risk-manager image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: joshwatley/at4j-risk-manager:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy with Docker
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/at4j-risk-manager
+            docker pull joshwatley/at4j-risk-manager:latest
+            docker stop risk-manager-service || true
+            docker rm risk-manager-service || true
+            docker run -d \
+              --name risk-manager-service \
+              --restart unless-stopped \
+              -p 8001:8001 \
+              -e PORT=${{ vars.PORT }} \
+              -e LOG_LEVEL=${{ vars.LOG_LEVEL }} \
+              -e EQUITY_CHECK_INTERVAL=${{ vars.EQUITY_CHECK_INTERVAL }} \
+              -e INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }} \
+              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e DB_URL=${{ secrets.DB_URL }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e OANDA_API_KEY=${{ secrets.OANDA_API_KEY }} \
+              -e OANDA_API_URL=${{ secrets.OANDA_API_URL }} \
+              -e MT5_API_URL=${{ secrets.MT5_API_URL }} \
+              -e MT5_API_KEY=${{ secrets.MT5_API_KEY }}
+              joshwatley/at4j-risk-manager:latest
