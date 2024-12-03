@@ -45,10 +45,8 @@ type MT5Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load environment variables: %v", err)
-	}
+	// We validate the environment variables anyway
+	_ = godotenv.Load()
 
 	cfg := &Config{}
 

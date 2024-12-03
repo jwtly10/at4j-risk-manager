@@ -97,9 +97,9 @@ func InitLogger() {
 	handler := newCustomHandler(opts)
 	logger = slog.New(handler)
 
-	env := os.Getenv("Env")
+	env := os.Getenv("ENV")
 	if env == "" {
-		env = "development"
+		env = "production"
 	}
 
 	logger.Info("logger initialized",

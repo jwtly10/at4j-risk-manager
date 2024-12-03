@@ -9,6 +9,7 @@ import (
 	"github.com/jwtly10/at4j-risk-manager/internal/db"
 	"github.com/jwtly10/at4j-risk-manager/internal/jobs"
 	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,11 @@ import (
 )
 
 func main() {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load environment configuration: %v", err)
+	}
+
 	logger.InitLogger()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -24,11 +30,6 @@ func main() {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		logger.Fatalf("Failed to load environment configuration: %v", err)
-	}
 
 	conn, err := db.NewDBConnection(cfg.DB)
 	if err != nil {
