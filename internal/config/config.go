@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	DB      PostgresConfig
-	Brokers BrokersConfig
-	Jobs    JobsConfig
-	Port    string
-	ApiKey  string
+	DB       PostgresConfig
+	Brokers  BrokersConfig
+	Jobs     JobsConfig
+	Telegram TelegramConfig
+	Port     string
+	ApiKey   string
 }
 
 type JobsConfig struct {
@@ -27,6 +28,11 @@ type PostgresConfig struct {
 	URL      string
 	Port     string
 	DBName   string
+}
+
+type TelegramConfig struct {
+	Token  string
+	ChatId string
 }
 
 type BrokersConfig struct {
@@ -88,6 +94,13 @@ func LoadConfig() (*Config, error) {
 		BaseUrl: os.Getenv("MT5_API_URL"),
 	}
 
+	t := TelegramConfig{
+		Token:  os.Getenv("TELEGRAM_BOT_TOKEN"),
+		ChatId: os.Getenv("TELEGRAM_CHAT_ID"),
+	}
+
+	cfg.Telegram = t
+
 	cfg.Brokers = BrokersConfig{
 		Oanda: o,
 		MT5:   m,
@@ -102,6 +115,10 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if err := cfg.Jobs.validate(); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.Telegram.validate(); err != nil {
 		return nil, err
 	}
 
@@ -149,6 +166,17 @@ func (b BrokersConfig) validate() error {
 func (j JobsConfig) validate() error {
 	if j.EquityCheckInterval == 0 {
 		return fmt.Errorf("EQUITY_CHECK_INTERVAL is required and CANNOT be 0")
+	}
+
+	return nil
+}
+
+func (t TelegramConfig) validate() error {
+	if t.Token == "" {
+		return fmt.Errorf("TELEGRAM_BOT_TOKEN is required")
+	}
+	if t.ChatId == "" {
+		return fmt.Errorf("TELEGRAM_CHAT_ID is required")
 	}
 
 	return nil

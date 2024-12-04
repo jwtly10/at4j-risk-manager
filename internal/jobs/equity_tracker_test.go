@@ -1,11 +1,13 @@
 package jobs
 
 import (
+	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"testing"
 	"time"
 )
 
 func TestIsUpdateTime(t *testing.T) {
+	logger.InitLogger()
 	tests := []struct {
 		name         string
 		currentTime  time.Time

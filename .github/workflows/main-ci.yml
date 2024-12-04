@@ -75,4 +75,6 @@ jobs:
               -e OANDA_API_URL=${{ secrets.OANDA_API_URL }} \
               -e MT5_API_URL=${{ secrets.MT5_API_URL }} \
               -e MT5_API_KEY=${{ secrets.MT5_API_KEY }} \
+              -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
+              -e TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }} \
               joshwatley/at4j-risk-manager:latest

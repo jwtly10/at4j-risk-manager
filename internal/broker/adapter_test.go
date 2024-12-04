@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jwtly10/at4j-risk-manager/internal/config"
+	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"net/http"
 	"os"
 	"testing"
@@ -18,6 +19,8 @@ func setupTestEnv(t *testing.T) config.BrokersConfig {
 	t.Helper()
 
 	_ = godotenv.Load()
+
+	logger.InitLogger()
 
 	// Validate required env vars are present
 	requiredVars := []string{"OANDA_API_KEY", "OANDA_API_URL", "TEST_OANDA_ACCOUNT_ID", "MT5_API_KEY", "MT5_API_URL", "TEST_MT5_ACCOUNT_ID"}
