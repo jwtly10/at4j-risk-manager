@@ -59,7 +59,7 @@ func (et *EquityTracker) Start() error {
 		select {
 		case <-ticket.C:
 			if err := et.checkAndUpdateEquity(ctx); err != nil {
-				logger.Infof("Error checking and updating equity: %v", err)
+				logger.Errorf("Error checking and updating equity: %v", err)
 			}
 		case <-et.stop:
 			return nil
