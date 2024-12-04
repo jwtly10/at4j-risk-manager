@@ -24,6 +24,7 @@ func NewServer(cfg *config.Config, dbClient *db.Client) *Server {
 
 	auth := middleware.APIKeyAuth(cfg.ApiKey)
 	mux.HandleFunc("/api/v1/equity/latest", auth(equityHandler.GetLatestEquity))
+	mux.HandleFunc("/health", handlers.HealthCheck)
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.Port),
