@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/jwtly10/at4j-risk-manager/internal/broker"
 	"github.com/jwtly10/at4j-risk-manager/internal/config"
+	"os"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -17,8 +18,20 @@ type Client struct {
 }
 
 func NewDBConnection(config config.PostgresConfig) (*sql.DB, error) {
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
-		config.URL, config.Port, config.Username, config.Password, config.DBName)
+	// In development, allow the user to specify the SSL mode
+	// Otherwise default to require
+	sslMode := "require"
+	env := os.Getenv("ENV")
+	if env == "development" {
+		s := os.Getenv("DB_SSL")
+		if s != "" {
+			sslMode = s
+		} else {
+			return nil, errors.New("DB_SSL environment variable must be set in development")
+		}
+	}
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.URL, config.Port, config.Username, config.Password, config.DBName, sslMode)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

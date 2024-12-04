@@ -43,13 +43,13 @@ func main() {
 	configs := map[string]jobs.BrokerTimeConfig{
 		"OANDA": {
 			Timezone:          "UTC",
-			DailyUpdateHour:   21,
-			DailyUpdateMinute: 15,
+			DailyUpdateHour:   00,
+			DailyUpdateMinute: 1,
 		},
 		"MT5_FTMO": {
 			Timezone:          "Europe/Prague",
-			DailyUpdateHour:   18,
-			DailyUpdateMinute: 9,
+			DailyUpdateHour:   00,
+			DailyUpdateMinute: 1,
 		},
 	}
 
