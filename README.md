@@ -1,6 +1,6 @@
 # AT4J Risk Management Service
 
-A Go-based service for monitoring and managing account equity across multiple broker accounts, designed as a critical risk management component of the AlgoTrade4j platform.
+An independent Golang risk monitoring service for the AlgoTrade4j platform.
 
 Used internally as a reliable way to track account equity and ensure that trading strategies are operating within risk limits.
 
@@ -13,6 +13,10 @@ This service provides continuous monitoring of account equity across configured 
 - Historical equity data tracking
 - Timezone-aware prop firm equity tracking (supports FTMO)
 - Independent operation alongside existing Java services
+- Telegram notifications for alerts
+
+# Future Enhancements
+- Redundancy and failover capabilities, independently track daily equity change and trigger closes
 
 ## API Endpoints
 
@@ -48,11 +52,3 @@ The service uses environment variables for configuration:
    ```bash
    go run cmd/main.go
    ```
-
-## Future Enhancements
-
-- Automated risk limit monitoring
-- Trade closure capabilities for risk violations
-- Telegram notifications for risk events
-- Smart data storage optimization
-- Additional broker integrations
