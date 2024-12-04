@@ -59,5 +59,5 @@ jobs:
               -e OANDA_API_KEY=${{ secrets.OANDA_API_KEY }} \
               -e OANDA_API_URL=${{ secrets.OANDA_API_URL }} \
               -e MT5_API_URL=${{ secrets.MT5_API_URL }} \
-              -e MT5_API_KEY=${{ secrets.MT5_API_KEY }}
+              -e MT5_API_KEY=${{ secrets.MT5_API_KEY }} \
               joshwatley/at4j-risk-manager:latest
