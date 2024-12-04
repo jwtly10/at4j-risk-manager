@@ -32,13 +32,13 @@ func (t *TelegramNotifier) NotifyError(message string, err error) {
 	htmlMessage := ""
 	if err == nil {
 		htmlMessage = fmt.Sprintf(
-			"[RMS] ERROR ⚠️\n"+
+			"[GO-RMS] ERROR ⚠️\n"+
 				"<b>Error:</b> %s\n",
 			message,
 		)
 	} else {
 		htmlMessage = fmt.Sprintf(
-			"[RMS] ERROR ⚠️\n"+
+			"[GO-RMS] ERROR ⚠️\n"+
 				"<b>Error:</b> %s\n"+
 				"<pre>%v</pre>\n",
 			message,
@@ -48,6 +48,19 @@ func (t *TelegramNotifier) NotifyError(message string, err error) {
 
 	err = notifyHtml(t.cfg.Token, t.cfg.ChatId, htmlMessage)
 	// If we fail, there's nothing to handle really so just log and continue
+	if err != nil {
+		logger.Errorf("Error sending telegram message: %v", err)
+	}
+}
+
+// Notify sends a generic message to a telegram chat, formatted in HTML.
+func (t *TelegramNotifier) Notify(message string) {
+	htmlMessage := fmt.Sprintf(
+		"[GO-RMS] 🚨\n"+
+			"%s\n",
+		message,
+	)
+	err := notifyHtml(t.cfg.Token, t.cfg.ChatId, htmlMessage)
 	if err != nil {
 		logger.Errorf("Error sending telegram message: %v", err)
 	}
