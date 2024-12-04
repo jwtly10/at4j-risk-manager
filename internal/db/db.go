@@ -17,7 +17,7 @@ type Client struct {
 }
 
 func NewDBConnection(config config.PostgresConfig) (*sql.DB, error) {
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
 		config.URL, config.Port, config.Username, config.Password, config.DBName)
 
 	db, err := sql.Open("postgres", connStr)
