@@ -8,6 +8,7 @@ import (
 	"github.com/jwtly10/at4j-risk-manager/internal/config"
 	"github.com/jwtly10/at4j-risk-manager/internal/db"
 	"github.com/jwtly10/at4j-risk-manager/internal/jobs"
+	"github.com/jwtly10/at4j-risk-manager/internal/notifications"
 	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"log"
 	"net/http"
@@ -53,6 +54,8 @@ func main() {
 		},
 	}
 
+	notifier := notifications.NewTelegramNotifier(&cfg.Telegram)
+
 	// Configure broker adapters
 	brokerAdapters := make(map[string]broker.BrokerAdapter)
 	oandaAdapter, _ := broker.NewAdapter(http.DefaultClient, broker.Oanda, cfg.Brokers)
@@ -61,7 +64,7 @@ func main() {
 	brokerAdapters[broker.MT5FTMO] = ftmoAdapter
 
 	// Start equity tracker job
-	tracker := jobs.NewEquityTracker(dbClient, configs, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
+	tracker := jobs.NewEquityTracker(dbClient, configs, notifier, brokerAdapters, time.Duration(cfg.Jobs.EquityCheckInterval)*time.Second)
 	go func() {
 		if err := tracker.Start(); err != nil {
 			logger.Errorf("Error starting equity tracker: %v", err)

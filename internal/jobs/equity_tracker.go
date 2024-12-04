@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jwtly10/at4j-risk-manager/internal/broker"
+	"github.com/jwtly10/at4j-risk-manager/internal/notifications"
 	"github.com/jwtly10/at4j-risk-manager/internal/utils"
 	"github.com/jwtly10/at4j-risk-manager/pkg/logger"
 	"time"
@@ -23,6 +24,7 @@ type BrokerTimeConfig struct {
 type EquityTracker struct {
 	brokerRepo     brokerRepository
 	brokerConfigs  map[string]BrokerTimeConfig
+	notifier       *notifications.TelegramNotifier
 	brokerAdapters map[string]broker.BrokerAdapter
 	checkInterval  time.Duration
 	stop           chan struct{}
@@ -32,12 +34,14 @@ type EquityTracker struct {
 func NewEquityTracker(
 	brokerRepo brokerRepository,
 	brokerConfigs map[string]BrokerTimeConfig,
+	notifier *notifications.TelegramNotifier,
 	brokerAdapters map[string]broker.BrokerAdapter,
 	checkInterval time.Duration,
 ) *EquityTracker {
 	return &EquityTracker{
 		brokerRepo:     brokerRepo,
 		brokerConfigs:  brokerConfigs,
+		notifier:       notifier,
 		brokerAdapters: brokerAdapters,
 		checkInterval:  checkInterval,
 		stop:           make(chan struct{}),
@@ -48,7 +52,7 @@ func NewEquityTracker(
 // Start starts the equity tracker with the given configuration
 func (et *EquityTracker) Start() error {
 
-	logger.Infof("Starting equity tracker with check interval %v", et.checkInterval)
+	logger.Infof("Starting equity tracker with check interval '%v'", et.checkInterval)
 
 	ticket := time.NewTicker(et.checkInterval)
 	defer ticket.Stop()
@@ -59,7 +63,8 @@ func (et *EquityTracker) Start() error {
 		select {
 		case <-ticket.C:
 			if err := et.checkAndUpdateEquity(ctx); err != nil {
-				logger.Errorf("Error checking and updating equity: %v", err)
+				logger.Errorf("Error checking and updating equity: '%v'", err)
+				et.notifier.NotifyError("Error running update equity job", err)
 			}
 		case <-et.stop:
 			return nil
@@ -86,19 +91,25 @@ func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 	for _, account := range accounts {
 		config, exists := et.brokerConfigs[account.BrokerType]
 		if !exists {
-			logger.Warnf("No configuration found for broker type %s. Skipping.", account.BrokerType)
+			msg := fmt.Sprintf("No configuration found for broker type %s [accountId: %s]. Skipping.", account.BrokerType, account.AccountID)
+			logger.Warnf(msg)
+			et.notifier.NotifyError(msg, nil)
 			continue
 		}
 
 		adapter, exists := et.brokerAdapters[account.BrokerType]
 		if !exists {
-			logger.Warnf("No adapter found for broker type %s. Skipping.", account.BrokerType)
+			msg := fmt.Sprintf("No adapter found for broker type %s [accountId: %s]. Skipping.", account.BrokerType, account.AccountID)
+			logger.Warnf(msg)
+			et.notifier.NotifyError(msg, nil)
 			continue
 		}
 
 		location, err := time.LoadLocation(config.Timezone)
 		if err != nil {
-			logger.Errorf("error loading timezone %s: %v for broker type %v", config.Timezone, account.BrokerType, err)
+			msg := fmt.Sprintf("Error loading timezone %s: for broker type %v [accountId: %s]: %v", config.Timezone, account.BrokerType, account.AccountID, err)
+			logger.Errorf(msg)
+			et.notifier.NotifyError(msg, nil)
 			continue
 		}
 
@@ -111,7 +122,7 @@ func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 				lastUpdateLocal := account.LastEquityUpdate.In(location)
 
 				if isSameDay(now, lastUpdateLocal) {
-					logger.Debugf("LastEquity already updated for broker %s today", account.BrokerType)
+					logger.Debugf("LastEquity already updated for brokerId %s today", account.AccountID)
 					continue
 				}
 			}
@@ -119,13 +130,17 @@ func (et *EquityTracker) checkAndUpdateEquity(ctx context.Context) error {
 
 			equity, err := adapter.GetEquity(ctx, account.AccountID)
 			if err != nil {
-				logger.Errorf("Error getting equity for broker %s: %v", account.BrokerType, err)
+				msg := fmt.Sprintf("Error getting equity for brokerId %s: %v", account.AccountID, err)
+				logger.Errorf(msg)
+				et.notifier.NotifyError(msg, err)
 				continue
 			}
 
 			err = et.brokerRepo.RecordEquity(ctx, account.ID, equity)
 			if err != nil {
-				logger.Errorf("error recording equity for broker %s: %v", account.BrokerType, err)
+				msg := fmt.Sprintf("Error recording equity for brokerId %s: %v", account.AccountID, err)
+				logger.Errorf(msg)
+				et.notifier.NotifyError(msg, err)
 			}
 
 			logger.Infof("LastEquity updated for broker %s: %.2f", account.BrokerType, equity)
